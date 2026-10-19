@@ -1,0 +1,8 @@
+# LHR21.2 Site Installation QA/QC form - Netlify settings.
+# Nothing is built: the form is published from site/ and the shared copy runs from
+# netlify/functions/qaqc.mjs. The project code is the environment variable QAQC_CODE,
+# set in Netlify (Project configuration > Environment variables) - never in this repository.
+[build]
+  publish = "site"
+  functions = "netlify/functions"
+  command = "echo 'nothing to build'"
