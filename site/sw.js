@@ -1,8 +1,8 @@
-/* LHR21.2 QA/QC form - offline copy. Build: 19/10/2026 – v13 shared copy (0085992f6f)
+/* LHR21.2 QA/QC form - offline copy. Build: 27/10/2026 – v14 outstanding filter (e951072ea8)
    Opens from the copy on the phone first, so it works with no signal; when there is signal a newer
    copy is fetched in the background and used the next time the form is opened. The shared copy
    (/api/...) always goes to the site and is never kept here. */
-const CACHE = "lhr212-qaqc-0085992f6f";
+const CACHE = "lhr212-qaqc-e951072ea8";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));

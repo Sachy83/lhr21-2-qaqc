@@ -386,6 +386,15 @@ const signCompany = (sd, sg, m) => (sg || {})[sd[0] + "Company"] ||
 const LEVEL_NOTE = "This is the Level 1 Site Installation Inspection record: installation checks only. No testing is carried out or recorded at this level; nothing is energised, run or wet tested. Testing and commissioning follow as separate stages.";
 
 let state = null, currentSet = SETS[0], currentTab = "details", incompleteOnly = false;
+/* with "Show outstanding only" on, the checks outstanding when the list was drawn stay on screen
+   while they are being worked on (ticked, photographed, snagged), until the section, the set or
+   the filter is changed - so the next tap never lands on the check below by surprise */
+let keepShown = new Set();
+function refreshOutstanding(){
+  keepShown = new Set();
+  if(!incompleteOnly || !state) return;
+  GROUPS.forEach(g => g.items.forEach(it => { if(!complete(it)) keepShown.add(it.id); }));
+}
 let photoTarget = null, photoKind = "record", photoSnag = 0;
 const snagIdOf = p => Number(p.snag || 0);
 const ITEMS = {}; GROUPS.forEach(g => g.items.forEach(it => ITEMS[it.id] = {item:it, group:g}));
@@ -580,7 +589,7 @@ function load(s){
    5. a failed save shows a red warning that stays on screen until a save works;
    6. the storage name above is never changed between issues: a new name silently leaves
       the answers typed in the earlier issue behind while photographs carry over.         */
-const BUILD = "19/10/2026 – v13 shared copy";
+const BUILD = "27/10/2026 – v14 outstanding filter";
 const TAB_ID = Math.random().toString(36).slice(2, 8);
 let saveTimer = null, dirty = false, baseStamp = "", stampSeq = 0, needRender = false, viewState = null, lastSavedAt = 0, warnOn = false;
 const stampOf = o => (o && o._v) ? (o._v.t + "." + o._v.by + "." + o._v.n) : "";
@@ -1014,7 +1023,7 @@ function buildChrome(){
       flush();
       if(typeof writeSnapshot === "function"){ await writeSnapshot("set change"); await writeLive(false); }
       currentSet = want; state = load(currentSet); baseStamp = stampOf(state); dirty = false; undoStack = []; REMOTE.keys = {};
-      await refreshPhotos(); render();
+      refreshOutstanding(); await refreshPhotos(); render();
       offerEarlier();
       if(sharedOn()){ showParkBar(); syncNow(); }
     } finally { lockView(false); }
@@ -1025,7 +1034,7 @@ function buildChrome(){
     const g = GROUPS.find(x => x.key === d[0]);
     return '<button data-t="' + d[0] + '">' + d[1] + (g ? '<span class="c" data-c="' + g.key + '"></span>' : '') + '</button>';
   }).join("");
-  tabs.querySelectorAll("button").forEach(b => b.onclick = () => { currentTab = b.dataset.t; render(); window.scrollTo(0,0); });
+  tabs.querySelectorAll("button").forEach(b => b.onclick = () => { currentTab = b.dataset.t; refreshOutstanding(); render(); window.scrollTo(0,0); });
 }
 function updateChrome(){
   const c = counts();
@@ -1076,7 +1085,7 @@ function groupHtml(g){
   let h = '<div class="filterbar"><button id="fBtn" class="' + (incompleteOnly ? "on" : "") + '">' +
     (incompleteOnly ? "Showing outstanding" : "Show outstanding only") + '</button><span>' + esc(g.title) + ' &middot; ' + groupCount(g) + '</span></div>';
   g.items.forEach(it => {
-    if(incompleteOnly && complete(it)) return;
+    if(incompleteOnly && complete(it) && !keepShown.has(it.id)) return;
     const r = rec(it.id);
     const alert = negTicked(it, r);
     const cls = openSnags(r).length ? "snag" : (alert ? "alert" : (r.na ? "na" : (complete(it) ? "done" : "")));
@@ -1181,7 +1190,7 @@ function wire(){
   v.querySelectorAll("[data-meta]").forEach(e => trackText(e, () => e.dataset.meta));
   v.querySelectorAll("[data-sign]").forEach(e => trackText(e, () => e.dataset.sign));
   const fb = document.getElementById("fBtn");
-  if(fb) fb.onclick = () => { incompleteOnly = !incompleteOnly; render(); };
+  if(fb) fb.onclick = () => { incompleteOnly = !incompleteOnly; refreshOutstanding(); render(); };
 
   /* typed text is saved by the listeners on #view (see boot) and always read from the
      screen when a save happens - the handlers below never keep hold of a record */
